@@ -1,6 +1,7 @@
 use std::{env, fs, os::unix::fs::chroot, path::Path, process::Stdio};
 
 use anyhow::{Context, Result};
+use nix::sched::{unshare, CloneFlags};
 
 fn main() -> Result<()> {
     let args: Vec<_> = std::env::args().collect();
@@ -29,6 +30,9 @@ fn main() -> Result<()> {
 
     chroot(&tmpdir).context("Chrooting to tmp dir").unwrap();
     env::set_current_dir("/").context("Setting curr dir (chdir) to tmp root")?;
+
+    // unsafe { libc::unshare(libc::CLONE_NEWPID) };
+    unshare(CloneFlags::CLONE_NEWPID).context("Creating new process namespace")?;
 
     let output = std::process::Command::new(Path::new("/").join(&cmd_bin))
         .args(command_args)

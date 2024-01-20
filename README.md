@@ -37,3 +37,9 @@ std::env::set_current_dir("/")?;
 
 - given a new root and subdir of current root pivot-root moves root(of child process) to subdir and mounts that as new root point
 - then we unmount the old root and leave the newly created root mount point
+
+### Process isolation
+
+- guarding the process tree
+- using [**PID namespaces**](https://man7.org/linux/man-pages/man7/pid_namespaces.7.html) we create an isolated process tree for the child process so that it cannot view/interact with host processes
+- the child process must have PID = 1
