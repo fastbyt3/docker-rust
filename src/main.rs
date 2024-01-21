@@ -28,18 +28,58 @@ async fn main() -> Result<()> {
 
     download_image(image_string, tmpdir.path()).await?;
 
-    let cmd_bin = Path::new(&command)
-        .file_name()
-        .context("Get file name of command binary")?;
+    let cmd_bin = Path::new(&command);
     fs::copy(command, tmpdir.path().join(&cmd_bin)).context("Copying cmd bin to tmp dir")?;
 
     chroot(&tmpdir).context("Chrooting to tmp dir").unwrap();
     env::set_current_dir("/").context("Setting curr dir (chdir) to tmp root")?;
 
+    // match fs::read_dir("/dev") {
+    //     Ok(entries) => {
+    //         for entry in entries {
+    //             if let Ok(entry) = entry {
+    //                 let file_name = entry.file_name();
+    //                 println!("{}", file_name.to_string_lossy());
+    //             }
+    //         }
+    //     }
+    //     Err(err) => {
+    //         eprintln!("Error reading directory: {}", err);
+    //     }
+    // }
+    // println!("----");
+    // match fs::read_dir("/bin") {
+    //     Ok(entries) => {
+    //         for entry in entries {
+    //             if let Ok(entry) = entry {
+    //                 let file_name = entry.file_name();
+    //                 println!("{}", file_name.to_string_lossy());
+    //             }
+    //         }
+    //     }
+    //     Err(err) => {
+    //         eprintln!("Error reading directory: {}", err);
+    //     }
+    // }
+    // println!("----");
+    // match fs::read_dir("/") {
+    //     Ok(entries) => {
+    //         for entry in entries {
+    //             if let Ok(entry) = entry {
+    //                 let file_name = entry.file_name();
+    //                 println!("{}", file_name.to_string_lossy());
+    //             }
+    //         }
+    //     }
+    //     Err(err) => {
+    //         eprintln!("Error reading directory: {}", err);
+    //     }
+    // }
+
     // unsafe { libc::unshare(libc::CLONE_NEWPID) };
     unshare(CloneFlags::CLONE_NEWPID).context("Creating new process namespace")?;
 
-    let output = std::process::Command::new(Path::new("/").join(&cmd_bin))
+    let output = std::process::Command::new(command)
         .args(command_args)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -71,30 +111,32 @@ async fn download_image(image: &str, tmpdir: &Path) -> Result<()> {
 
     let http_client = reqwest::Client::new();
     let auth_token = get_token(image_name).await?;
+    // println!("Auth token: {auth_token}");
     let arch = "amd64";
     let digest = get_digest(&http_client, image_name, image_tag, &auth_token, arch).await?;
+    // println!("Digest: {digest:?}");
     let layers = get_layers(&http_client, image_name, &auth_token, &digest).await?;
 
     for layer in layers {
+        // println!("Layer digest: {}", layer.digest);
         let img_blob = http_client
             .get(format!(
                 "https://registry.hub.docker.com/v2/library/{}/blobs/{}",
                 image_name, layer.digest
             ))
-            .header("Authorization", format!("Bearer: {}", auth_token))
+            .header("Authorization", format!("Bearer {}", auth_token))
             .send()
-            .await?
-            .bytes()
             .await?;
+        // println!("IMAGE BLOB: {img_blob:?}");
+        let data = img_blob.bytes().await?;
 
-        println!("IMAGE BLOB: {img_blob:?}");
-
-        let tar = flate2::read::GzDecoder::new(img_blob.as_ref());
+        let tar = flate2::read::GzDecoder::new(&data[..]);
         tar::Archive::new(tar)
             .unpack(tmpdir)
             .context("unpack tar contents")?;
     }
 
+    // println!("Completed downloading image !!");
     return Ok(());
 }
 
