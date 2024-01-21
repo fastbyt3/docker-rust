@@ -29,6 +29,6 @@ anyhow = "1.0.59"                                                  # error handl
 thiserror = "1.0.32"                                               # error handling
 tempfile = "3"                                                     # creating temporary directories
 regex = "1"                                                        # for regular expressions
-flate2 = "1.0.25"                                                  # for handling compressed data
+flate2 = "1.0.25"
 tar = "0.4.38"
 nix = { version = "0.27.1", features = ["sched"] }

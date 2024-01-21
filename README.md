@@ -43,3 +43,21 @@ std::env::set_current_dir("/")?;
 - guarding the process tree
 - using [**PID namespaces**](https://man7.org/linux/man-pages/man7/pid_namespaces.7.html) we create an isolated process tree for the child process so that it cannot view/interact with host processes
 - the child process must have PID = 1
+
+### Fetching from docker registry
+
+- Fetch from [docker registry](https://docs.docker.com/registry/) the contents of public images in docker hub then exec cmd with it
+- steps:
+    - auth
+    - fetch image manifest
+    - pull layers of img and extract to chroot dir
+ 
+- base url: `registry.hub.docker.com`
+
+- cmd syntax: `mydocker run ubuntu:latest /bin/echo hey`
+
+- when interacting with registry API
+    - prepend `library/` to img names
+
+- Using [JWT authentication](https://distribution.github.io/distribution/spec/auth/jwt/)
+
